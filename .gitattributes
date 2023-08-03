@@ -1,1 +1,1 @@
-ai/resources/** text eol=lf
+ai/resources/** -filter -diff -merge -text
