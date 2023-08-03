@@ -1,0 +1,5 @@
+train: training/images
+val: validation/images
+
+nc: 1
+names: ["license_plate"]

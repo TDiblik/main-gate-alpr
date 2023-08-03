@@ -1,0 +1,7 @@
+# AI
+ai/training_data/
+ai/training_data_preprocessed/
+ai/runs
+ai/resources/yolov8x.pt
+ai/resources/andrewmvd_dataset.zip
+ai/resources/aslanahmedov_dataset.zip
