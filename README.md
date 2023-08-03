@@ -3,14 +3,16 @@
 ## Train your own model (optional)
 
 1. Go into `./ai/resources` folder
-2. `cat yolov8x_* > yolov8x.pt`
-3. `cat andrewmvd_dataset_* > andrewmvd_dataset.zip`
-4. `cat aslanahmedov_dataset_* > aslanahmedov_dataset.zip`
-5. Go one level up back into `./ai` folder
-6. `pip install -r requirements.txt`
-7. `python prepare.py`
-8. Go into `train.py` and configure which pre-trained model you want to use.
-9. `python train.py`
+2. ```
+   cat yolov8x_* > yolov8x.pt
+   cat andrewmvd_dataset_* > andrewmvd_dataset.zip
+   cat aslanahmedov_dataset_* > aslanahmedov_dataset.zip
+   ```
+3. Go one level up back into `./ai` folder
+4. `pip install -r requirements.txt`
+5. `python prepare.py`
+6. Go into `train.py` and configure which pre-trained model you want to use.
+7. `python train.py`
 
 # Acknowledgements
 

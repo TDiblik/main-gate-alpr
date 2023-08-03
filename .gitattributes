@@ -1,5 +1,1 @@
-*.pt text eol=lf
-*.zip text eol=lf
-yolov8x_* text eol=lf
-andrewmvd_dataset_* text eol=lf
-aslanahmedov_dataset_* text eol=lf
+ai/resources/** text eol=lf
