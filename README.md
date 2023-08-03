@@ -4,6 +4,8 @@
 
 1. Go into `./ai/resources` folder
 2. ```
+   cat yolov8m_* > yolov8m.pt
+   cat yolov8l_* > yolov8l.pt
    cat yolov8x_* > yolov8x.pt
    cat andrewmvd_dataset_* > andrewmvd_dataset.zip
    cat aslanahmedov_dataset_* > aslanahmedov_dataset.zip
@@ -13,6 +15,10 @@
 5. `python prepare.py`
 6. Go into `train.py` and configure which pre-trained model you want to use.
 7. `python train.py`
+
+# Notes
+
+- When adding stuff into resources, for anything over 25MB, use the following command: `split -b 25M --numeric-suffixes <name> <name>_` and add proper documentation on how to build it back together after clone.
 
 # Acknowledgements
 
