@@ -11,10 +11,12 @@
    cat aslanahmedov_dataset_* > aslanahmedov_dataset.zip
    ```
 3. Go one level up back into `./ai` folder
-4. `pip install -r requirements.txt`
-5. `python prepare.py`
-6. Go into `train.py` and configure which pre-trained model you want to use.
-7. `python train.py`
+4. `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
+5. `pip install -r requirements.txt`
+6. `export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512` or `set PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512`
+7. `python prepare.py`
+8. Go into `train.py` and configure which pre-trained model you want to use.
+9. `python train.py`
 
 # Notes
 
