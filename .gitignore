@@ -12,3 +12,4 @@ ai/cropped_box_for_tesseract_*.jpg
 
 # Server
 server/*.pt
+server/.env

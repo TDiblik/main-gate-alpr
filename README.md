@@ -1,5 +1,9 @@
 # How to setup
 
+## Start the server
+
+TODO
+
 ## Train your own model (optional)
 
 1. Go into `./ai/resources` folder
