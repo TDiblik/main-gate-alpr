@@ -2,3 +2,6 @@ numpy==1.24.3
 opencv_python==4.8.0.74
 ultralytics==8.0.147
 cuda-python==12.2.0
+matplotlib==3.7.2
+Pillow==10.0.0
+pytesseract==0.3.10

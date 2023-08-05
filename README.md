@@ -9,14 +9,20 @@
    cat yolov8x_* > yolov8x.pt
    cat andrewmvd_dataset_* > andrewmvd_dataset.zip
    cat aslanahmedov_dataset_* > aslanahmedov_dataset.zip
+   cp *.pt ..
    ```
 3. Go one level up back into `./ai` folder
 4. `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
 5. `pip install -r requirements.txt`
-6. `export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512` or `set PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512`
+6. `export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512` (on Linux) or `set PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512` (on Windows)
 7. `python prepare.py`
 8. Go into `train.py` and configure which pre-trained model you want to use.
 9. `python train.py`
+
+### Test your model visually
+
+1. Install [tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html)
+2. `python test.py {path_to_your_model} {path_to_image_to_test}`
 
 # Notes
 

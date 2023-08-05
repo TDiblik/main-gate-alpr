@@ -7,3 +7,5 @@ ai/resources/yolov8l.pt
 ai/resources/yolov8x.pt
 ai/resources/andrewmvd_dataset.zip
 ai/resources/aslanahmedov_dataset.zip
+ai/*.pt
+ai/cropped_box_for_tesseract_*.jpg
