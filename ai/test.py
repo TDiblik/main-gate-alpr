@@ -34,12 +34,11 @@ if __name__ == '__main__':
     for (i, box) in enumerate(result.boxes):
         x_min, y_min, x_max, y_max = box.xyxy.cpu().detach().numpy()[0]
 
-        # Read using tesseract
+        # Read using tesseract (https://wilsonmar.github.io/tesseract/)
         print(f'Reading box {i}')
         cropped_img_file_name = f'cropped_box_for_tesseract_{i}.jpg'
         cropped_img = img.crop((x_min, y_min, x_max, y_max))
         cropped_img.save(cropped_img_file_name, optimize=False)
-        # text_from_cropped_img = pytesseract.image_to_string(cropped_img_file_name, lang="eng", config="--psm 13 --oem 1 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
         text_from_cropped_img = pytesseract.image_to_string(cropped_img_file_name, lang="eng", config="--psm 7 --oem 1 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
         if not text_from_cropped_img:
             text_from_cropped_img = "no text found"
