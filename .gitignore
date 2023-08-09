@@ -9,6 +9,7 @@ ai/resources/andrewmvd_dataset.zip
 ai/resources/aslanahmedov_dataset.zip
 ai/*.pt
 ai/cropped_box_for_tesseract_*.jpg
+ai/intermediate_detection_files/
 
 # Server
 server/*.pt
