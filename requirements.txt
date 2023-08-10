@@ -6,3 +6,4 @@ matplotlib==3.7.2
 Pillow==10.0.0
 pytesseract==0.3.10
 python-dotenv==1.0.0
+imutils==0.5.4

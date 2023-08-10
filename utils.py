@@ -9,9 +9,12 @@ from PIL import Image
 import pytesseract
 
 # Returns number of results + results as boxes
-def detect_license_plates(preloaded_model: YOLO, car_image: Image) -> (int, any):
+def detect_with_yolo(preloaded_model: YOLO, car_image: Image) -> (int, any):
     result = preloaded_model.predict(car_image)[0]
     return (len(result.boxes), result.boxes)
+
+def normalize_label(label):
+    return label.strip().lower()
 
 def clean_plate_into_contours(cvImage: np.ndarray, fixed_width: int) -> np.ndarray:
     plate_img = cvImage.copy()

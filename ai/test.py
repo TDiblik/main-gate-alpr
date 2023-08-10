@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     print("Starting prediction")
     img_to_test = Image.open(args.img_to_test)
-    number_of_license_plate_boxes_found, license_plates_as_boxes = utils.detect_license_plates(license_plate_prediction_model, img_to_test)
+    number_of_license_plate_boxes_found, license_plates_as_boxes = utils.detect_with_yolo(license_plate_prediction_model, img_to_test)
     if number_of_license_plate_boxes_found == 0:
         print("Didn't find any boxes/matches.")
         sys.exit(0)
