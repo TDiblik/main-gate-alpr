@@ -16,15 +16,7 @@ def detect_with_yolo(preloaded_model: YOLO, car_image: Image) -> (int, any):
 def normalize_label(label):
     return label.strip().lower()
 
-def clean_plate_into_contours(cvImage: np.ndarray, fixed_width: int) -> np.ndarray:
-    plate_img = cvImage.copy()
-    
-    # Set non-black/white pixels to white
-    # gray_plate_img = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
-    # _, binary_img = cv2.threshold(gray_plate_img, 128, 255, cv2.THRESH_BINARY)
-    # non_black_white_mask = binary_img == 0
-    # plate_img[non_black_white_mask] = [255, 255, 255]  
-
+def clean_plate_into_contours(plate_img: np.ndarray, fixed_width: int) -> np.ndarray:
     V = cv2.split(cv2.cvtColor(plate_img, cv2.COLOR_BGR2HSV))[2]
     T = threshold_local(V, 29, offset=15, method='gaussian')
     thresh = (V > T).astype('uint8') * 255
@@ -56,8 +48,8 @@ def get_letter_rectangles_from_contours(iwl):
     rectangles.sort()
     return rectangles
 
-def gen_intermediate_file_name(filename: str, file_type: str, iter_number: int | str):
-    return f"./intermediate_detection_files/{filename}_{iter_number}.{file_type}"
+def gen_intermediate_file_name(filename: str, file_type: str, unique_identifier: str):
+    return f"./intermediate_detection_files/{filename}_{unique_identifier}.{file_type}"
 
 # This function should be called right after getting license plate boxes
 def prepare_env_for_reading_license_plates(should_save_intermediate_files: bool):
@@ -68,7 +60,7 @@ def prepare_env_for_reading_license_plates(should_save_intermediate_files: bool)
 
 # Read single license plate box
 # Returns license plate as string
-def read_license_plate(iter_number: int, box: any, original_image: Image, width_boost: int, additional_white_spacing_each_side: int, debug: bool) -> str:
+def read_license_plate(unique_identifier: str, box: any, original_image: Image, width_boost: int, additional_white_spacing_each_side: int, debug: bool, minimum_number_of_chars_for_match: int) -> (Image, str):
     # Crop image
     x_min, y_min, x_max, y_max = box.xyxy.cpu().detach().numpy()[0]
     original_width = x_max - x_min
@@ -86,23 +78,26 @@ def read_license_plate(iter_number: int, box: any, original_image: Image, width_
         ((55, 0, boosted_width - 20, boosted_height)) 
     )
     if debug:
-        license_plate_cropped_img.save(gen_intermediate_file_name("cropped_license_plate_full", "jpg", iter_number))
+        license_plate_cropped_img.save(gen_intermediate_file_name("cropped_license_plate_full", "jpg", unique_identifier))
         
     # Pre-process the image
     license_plate_cropped_img_as_np_array = cv2.cvtColor(np.array(license_plate_cropped_img), cv2.COLOR_GRAY2BGR)
     iwl_bb = clean_plate_into_contours(license_plate_cropped_img_as_np_array, width_boost)
     iwl_wb = cv2.bitwise_not(iwl_bb)
     if debug:
-        cv2.imwrite(gen_intermediate_file_name("iwl_bb", "jpg", iter_number), iwl_bb, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
-        cv2.imwrite(gen_intermediate_file_name("iwl_wb", "jpg", iter_number), iwl_wb, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+        cv2.imwrite(gen_intermediate_file_name("iwl_bb", "jpg", unique_identifier), iwl_bb, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+        cv2.imwrite(gen_intermediate_file_name("iwl_wb", "jpg", unique_identifier), iwl_wb, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
         
     # Get each letter
     resulting_license_plate_string = ""
     letter_rectangles = get_letter_rectangles_from_contours(iwl_wb)
     iwl_wb_pil = Image.fromarray(iwl_wb, mode="L")
     
-    for j, (x, y, w, h) in enumerate(letter_rectangles):
-        # letter_box_cropped_img = license_plate_cropped_img.crop((x, y, x + w, y + h))
+    # No reason to try reading, if there aren't even enought rectagles (skips reading which improves performance)
+    if len(letter_rectangles) < minimum_number_of_chars_for_match:
+        return (license_plate_cropped_img, "")
+    
+    for i, (x, y, w, h) in enumerate(letter_rectangles):
         letter_box_cropped_img = iwl_wb_pil.crop((x, y, x + w, y + h))
         new_letter_box_img = Image.new(
             "L", (
@@ -112,7 +107,7 @@ def read_license_plate(iter_number: int, box: any, original_image: Image, width_
         )
         new_letter_box_img.paste(letter_box_cropped_img, (additional_white_spacing_each_side, additional_white_spacing_each_side))
         if debug:
-            new_letter_box_img.save(gen_intermediate_file_name("cropped_image", "jpg", f"{iter_number}_{j}"))
+            new_letter_box_img.save(gen_intermediate_file_name("cropped_image", "jpg", f"{unique_identifier}_{i}"))
 
         # Read using tesseract (https://wilsonmar.github.io/tesseract/)
         char_from_img = pytesseract.image_to_string(new_letter_box_img, lang="eng", config="--psm 13 --dpi 96 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
@@ -121,4 +116,4 @@ def read_license_plate(iter_number: int, box: any, original_image: Image, width_
             print(char_from_img)
         resulting_license_plate_string += char_from_img
         
-    return resulting_license_plate_string
+    return (license_plate_cropped_img, resulting_license_plate_string.strip())
