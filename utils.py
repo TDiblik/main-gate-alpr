@@ -7,6 +7,7 @@ import numpy as np
 from ultralytics import YOLO
 from PIL import Image
 import pytesseract
+import concurrent
 
 # Returns number of results + results as boxes
 def detect_with_yolo(preloaded_model: YOLO, car_image: Image) -> (int, any):
@@ -17,8 +18,11 @@ def normalize_label(label):
     return label.strip().lower()
 
 def clean_plate_into_contours(plate_img: np.ndarray, fixed_width: int) -> np.ndarray:
+    # plate_img = cv2.GaussianBlur(plate_img, (5,5), 0)
+    plate_img = cv2.GaussianBlur(plate_img, (11,11), 0)
     V = cv2.split(cv2.cvtColor(plate_img, cv2.COLOR_BGR2HSV))[2]
-    T = threshold_local(V, 29, offset=15, method='gaussian')
+    # T = threshold_local(V, 29, offset=15, method='gaussian')
+    T = threshold_local(V, 99, offset=5, method='gaussian')
     thresh = (V > T).astype('uint8') * 255
     thresh = cv2.bitwise_not(thresh)
     plate_img = imutils.resize(plate_img, width=fixed_width)
@@ -89,7 +93,6 @@ def read_license_plate(unique_identifier: str, box: any, original_image: Image, 
         cv2.imwrite(gen_intermediate_file_name("iwl_wb", "jpg", unique_identifier), iwl_wb, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
         
     # Get each letter
-    resulting_license_plate_string = ""
     letter_rectangles = get_letter_rectangles_from_contours(iwl_wb)
     iwl_wb_pil = Image.fromarray(iwl_wb, mode="L")
     
@@ -97,7 +100,8 @@ def read_license_plate(unique_identifier: str, box: any, original_image: Image, 
     if len(letter_rectangles) < minimum_number_of_chars_for_match:
         return (license_plate_cropped_img, "")
     
-    for i, (x, y, w, h) in enumerate(letter_rectangles):
+    def process_letter_rectangle(args):
+        i, (x, y, w, h) = args
         letter_box_cropped_img = iwl_wb_pil.crop((x, y, x + w, y + h))
         new_letter_box_img = Image.new(
             "L", (
@@ -106,14 +110,21 @@ def read_license_plate(unique_identifier: str, box: any, original_image: Image, 
             ), "white"
         )
         new_letter_box_img.paste(letter_box_cropped_img, (additional_white_spacing_each_side, additional_white_spacing_each_side))
+
         if debug:
             new_letter_box_img.save(gen_intermediate_file_name("cropped_image", "jpg", f"{unique_identifier}_{i}"))
 
-        # Read using tesseract (https://wilsonmar.github.io/tesseract/)
         char_from_img = pytesseract.image_to_string(new_letter_box_img, lang="eng", config="--psm 13 --dpi 96 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
         char_from_img = str(char_from_img).replace("O", "0").strip()
+
         if debug:
-            print(char_from_img)
-        resulting_license_plate_string += char_from_img
-        
+            print(f"{i} => {char_from_img}")
+
+        return char_from_img
+
+    resulting_license_plate_string = ""
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = list(executor.map(process_letter_rectangle, enumerate(letter_rectangles)))
+        resulting_license_plate_string = "".join(results)
+
     return (license_plate_cropped_img, resulting_license_plate_string.strip())

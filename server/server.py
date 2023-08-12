@@ -1,5 +1,7 @@
 import os
 import sys
+import threading
+import time
 import cv2
 import asyncio
 import websockets
@@ -28,13 +30,15 @@ CAR_RELATED_LABELS = [
     utils.normalize_label('car'), 
     utils.normalize_label('motorcycle'), 
     utils.normalize_label('bus'), 
-    utils.normalize_label('train'), 
-    utils.normalize_label('truck')
+    # utils.normalize_label('train'), 
+    utils.normalize_label('truck'),
+    utils.normalize_label('boat'), 
 ]
 
 def _print(string):
     if DEBUG: print(string)
 
+############ Web socket server ############
 CONNECTED_SOCKETS = []
 async def handle_connection(websocket, path):
     global CONNECTED_SOCKETS
@@ -45,7 +49,43 @@ async def handle_connection(websocket, path):
             pass
     finally:
         CONNECTED_SOCKETS.remove(websocket)
+def run_websocket_server():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(websockets.serve(handle_connection, "localhost", WS_PORT))
+    loop.run_forever()
 
+############ Video capture ############
+LATEST_FRAME = None
+def run_video_capture():
+    global LATEST_FRAME
+    while True:
+        capture = cv2.VideoCapture(RTSP_CAPTURE_CONFIG)
+        if capture.isOpened() is False:
+            _print("Unable to connect to video capture. Will try again after 5 seconds...")
+            LATEST_FRAME = None
+            time.sleep(5)
+            continue
+
+        while(capture.isOpened()):
+            able_to_read_frame, frame = capture.read()
+            if able_to_read_frame is False:
+                _print("Could not read frame from video capture, reconnecting...")
+                LATEST_FRAME = None
+                break
+
+            if DEBUG:
+                cv2.startWindowThread()
+                cv2.namedWindow("frame")
+                cv2.imshow("frame", cv2.resize(frame, (750, 750)))
+                if cv2.waitKey(20) & 0xFF == ord('q'):
+                    os.exit()
+
+            LATEST_FRAME = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).astype(np.uint8))
+
+        capture.release()
+
+############ Detection ############
 # [(Image, Image, str)] => array of (car image, license plate image, license plate as string)
 def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, str)]:
     number_of_yolo_boxes, yolo_boxes = utils.detect_with_yolo(PURE_YOLO_MODEL, captured_frame)
@@ -64,6 +104,10 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
             continue
 
         x_min, y_min, x_max, y_max = car_box.xyxy.cpu().detach().numpy()[0]
+        if y_min < 42.5: # todo: this should be env variable and properly documented.
+            _print(f"Found car, however it's too far \"{y_min}\" (req \"REQ\"), skipping")
+            continue
+
         car_image = captured_frame.crop((x_min, y_min, x_max, y_max))
         if DEBUG:
             car_image.save(utils.gen_intermediate_file_name(f"cropped_car", "jpg", i))
@@ -73,7 +117,7 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
             continue
 
         for (j, license_plate_box) in enumerate(license_plates_as_boxes):
-            license_plate_image, license_plate_as_string = utils.read_license_plate(f"{i}_{j}", license_plate_box, car_image, 500, 20, True, MINIMUM_NUMBER_OF_CHARS_FOR_MATCH)
+            license_plate_image, license_plate_as_string = utils.read_license_plate(f"{i}_{j}", license_plate_box, car_image, 500, 20, DEBUG, MINIMUM_NUMBER_OF_CHARS_FOR_MATCH)
             if license_plate_as_string == "":
                 _print(f"Car {i} ; Result {j}, unable to find any characters of detected license plate")
                 continue
@@ -87,7 +131,7 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
     return license_plates_recognized
 
 # any => Image (but it cannot be used as type)
-def validate_results(recognitions_between_rounds: list[list[(any, any, str)]], number_of_occurrences_to_be_valid: int):
+def validate_results_between_rounds(recognitions_between_rounds: list[list[(any, any, str)]], number_of_occurrences_to_be_valid: int):
     license_plate_counts = {}
     for recognitions in recognitions_between_rounds:
         for _, _, license_plate_as_string in recognitions:
@@ -112,57 +156,51 @@ def validate_results(recognitions_between_rounds: list[list[(any, any, str)]], n
 
     return validated_recognitions
 
-async def detection_main_loop():
+async def detection():
+    recognitions_between_rounds = []
     while True:
-        capture = cv2.VideoCapture(RTSP_CAPTURE_CONFIG)
-        if capture.isOpened() is False:
-            _print("Unable to connect to video capture. Will try again after 5 seconds...")
-            await asyncio.sleep(5)
+        if LATEST_FRAME is None:
+            _print("LATEST_FRAME is None, nothing to do, sleeping for 1 second...")
+            time.sleep(1)
             continue
 
-        recognitions_between_rounds = []
-        while(capture.isOpened()):
-            await asyncio.sleep(0.01) # Checkup on other ascio tasks
-            able_to_read_frame, frame = capture.read()
-            if able_to_read_frame is False:
-                _print("Could not read frame from video capture, reconnecting...")
-                break
+        license_plates_recognized = detect_license_plates_from_frame(LATEST_FRAME)
+        if len(license_plates_recognized) == 0:
+            continue
 
-            if DEBUG:
-                cv2.startWindowThread()
-                cv2.namedWindow("frame")
-                cv2.imshow("frame", cv2.resize(frame, (750, 750)))
-                if cv2.waitKey(20) & 0xFF == ord('q'):
-                    os.exit()
-
-            license_plates_recognized = detect_license_plates_from_frame(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).astype(np.uint8)))
-            if len(license_plates_recognized) == 0:
-                continue
-
-            recognitions_between_rounds.append(license_plates_recognized)
-            if len(recognitions_between_rounds) != NUMBER_OF_VALIDATION_ROUNDS:
-                continue
-            
-            validated_results = validate_results(recognitions_between_rounds, NUMBER_OF_OCCURRENCES_TO_BE_VALID)
-            if len(validated_results) == 0:
-                recognitions_between_rounds = []
-                continue
-                
-            _print("Sending result: ")
-            _print(validated_results)
-            for socket in CONNECTED_SOCKETS:
-                for res in validated_results:
-                    await socket.send(res[2])
-                # await socket.send(validated_results)
-
+        recognitions_between_rounds.append(license_plates_recognized)
+        if len(recognitions_between_rounds) != NUMBER_OF_VALIDATION_ROUNDS:
+            continue
+        
+        validated_results = validate_results_between_rounds(recognitions_between_rounds, NUMBER_OF_OCCURRENCES_TO_BE_VALID)
+        if len(validated_results) == 0:
             recognitions_between_rounds = []
+            continue
+            
+        _print("Sending result: ")
+        _print(validated_results)
+        for socket in CONNECTED_SOCKETS:
+            for res in validated_results:
+                await socket.send(res[2])
 
-        capture.release()
+        recognitions_between_rounds = []
 
-async def main():
-    ws_server = await websockets.serve(handle_connection, "localhost", WS_PORT)
-    asyncio.create_task(detection_main_loop())
-    await ws_server.wait_closed()
+def run_detection():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(detection())
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    os.environ['OMP_THREAD_LIMIT'] = '1'
+
+    websocket_thread = threading.Thread(target=run_websocket_server)
+    capture_thread = threading.Thread(target=run_video_capture)
+    detection_thread = threading.Thread(target=run_detection)
+
+    websocket_thread.start()
+    capture_thread.start()
+    detection_thread.start()
+
+    websocket_thread.join()
+    capture_thread.join()
+    detection_thread.join()
