@@ -22,6 +22,7 @@ LICENSE_PLATE_YOLO_MODEL_PATH = os.getenv("LICENSE_PLATE_YOLO_MODEL_PATH")
 MINIMUM_NUMBER_OF_CHARS_FOR_MATCH = int(os.getenv("MINIMUM_NUMBER_OF_CHARS_FOR_MATCH"))
 NUMBER_OF_VALIDATION_ROUNDS = int(os.getenv("NUMBER_OF_VALIDATION_ROUNDS"))
 NUMBER_OF_OCCURRENCES_TO_BE_VALID = int(os.getenv("NUMBER_OF_OCCURRENCES_TO_BE_VALID"))
+SKIP_BEFORE_Y_MIN = float(os.getenv("SKIP_BEFORE_Y_MIN"))
 
 # Initialize global static variables
 PURE_YOLO_MODEL = YOLO(PURE_YOLO_MODEL_PATH)
@@ -104,7 +105,7 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
             continue
 
         x_min, y_min, x_max, y_max = car_box.xyxy.cpu().detach().numpy()[0]
-        if y_min < 42.5: # todo: this should be env variable and properly documented.
+        if y_min < SKIP_BEFORE_Y_MIN:
             _print(f"Found car, however it's too far \"{y_min}\" (req \"REQ\"), skipping")
             continue
 
