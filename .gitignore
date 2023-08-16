@@ -1,5 +1,6 @@
 # General
-__pycache__/
+**/__pycache__/
+**/intermediate_detection_files/
 
 # AI
 ai/training_data/
@@ -12,8 +13,11 @@ ai/resources/andrewmvd_dataset.zip
 ai/resources/aslanahmedov_dataset.zip
 ai/*.pt
 ai/cropped_box_for_tesseract_*.jpg
-**/intermediate_detection_files/
 
 # Server
 server/*.pt
 server/.env
+
+# Client
+client/target/
+client/Cargo.lock

@@ -38,6 +38,7 @@ if __name__ == '__main__':
         _, license_plate_as_string = utils.read_license_plate(i, box, img_to_test, 500, 20, True, 4)
         if len(license_plate_as_string) == 0:
             print(f"Result {i}, unable to find any characters of detected license plate")
+        print(f"Found license plate: {license_plate_as_string}")
 
         # Plot results
         x_min, y_min, x_max, y_max = box.xyxy.cpu().detach().numpy()[0]

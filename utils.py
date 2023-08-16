@@ -1,3 +1,4 @@
+import io
 import os
 import shutil
 import cv2
@@ -57,10 +58,12 @@ def gen_intermediate_file_name(filename: str, file_type: str, unique_identifier:
 
 # This function should be called right after getting license plate boxes
 def prepare_env_for_reading_license_plates(should_save_intermediate_files: bool):
-    if should_save_intermediate_files:
-        if os.path.exists("./intermediate_detection_files/"):
-            shutil.rmtree("./intermediate_detection_files/")
-        os.mkdir("./intermediate_detection_files/")
+    try:
+        if should_save_intermediate_files:
+            if os.path.exists("./intermediate_detection_files/"):
+                shutil.rmtree("./intermediate_detection_files/")
+            os.mkdir("./intermediate_detection_files/")
+    except: pass
 
 # Read single license plate box
 # Returns license plate as string
@@ -79,7 +82,7 @@ def read_license_plate(unique_identifier: str, box: any, original_image: Image, 
     ).resize( # resizing makes recognition more effective
         [boosted_width, boosted_height]
     ).crop( # crop from left and right, because license plate recognition matches with overflow
-        ((55, 0, boosted_width - 20, boosted_height)) 
+        ((45, 0, boosted_width - 20, boosted_height)) 
     )
     if debug:
         license_plate_cropped_img.save(gen_intermediate_file_name("cropped_license_plate_full", "jpg", unique_identifier))
@@ -128,3 +131,9 @@ def read_license_plate(unique_identifier: str, box: any, original_image: Image, 
         resulting_license_plate_string = "".join(results)
 
     return (license_plate_cropped_img, resulting_license_plate_string.strip())
+
+# https://stackoverflow.com/a/55117662/16638833
+def img_to_bytes(image: Image, format="JPEG"):
+    bytes_io = io.BytesIO()
+    image.save(bytes_io, format=format)
+    return bytes_io.getvalue()

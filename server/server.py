@@ -1,9 +1,9 @@
 import os
 import sys
+import uuid
 import threading
 import time
 import cv2
-import asyncio
 import websockets
 import numpy as np
 from PIL import Image
@@ -22,7 +22,7 @@ LICENSE_PLATE_YOLO_MODEL_PATH = os.getenv("LICENSE_PLATE_YOLO_MODEL_PATH")
 MINIMUM_NUMBER_OF_CHARS_FOR_MATCH = int(os.getenv("MINIMUM_NUMBER_OF_CHARS_FOR_MATCH"))
 NUMBER_OF_VALIDATION_ROUNDS = int(os.getenv("NUMBER_OF_VALIDATION_ROUNDS"))
 NUMBER_OF_OCCURRENCES_TO_BE_VALID = int(os.getenv("NUMBER_OF_OCCURRENCES_TO_BE_VALID"))
-SKIP_BEFORE_Y_MIN = float(os.getenv("SKIP_BEFORE_Y_MIN"))
+SKIP_BEFORE_Y_MAX = float(os.getenv("SKIP_BEFORE_Y_MAX"))
 
 # Initialize global static variables
 PURE_YOLO_MODEL = YOLO(PURE_YOLO_MODEL_PATH)
@@ -51,6 +51,7 @@ async def handle_connection(websocket, path):
     finally:
         CONNECTED_SOCKETS.remove(websocket)
 def run_websocket_server():
+    import asyncio
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(websockets.serve(handle_connection, "localhost", WS_PORT))
@@ -105,8 +106,8 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
             continue
 
         x_min, y_min, x_max, y_max = car_box.xyxy.cpu().detach().numpy()[0]
-        if y_min < SKIP_BEFORE_Y_MIN:
-            _print(f"Found car, however it's too far \"{y_min}\" (req \"REQ\"), skipping")
+        if y_max < SKIP_BEFORE_Y_MAX:
+            _print(f"Found car, however it's too far \"{y_max}\" (req \"{SKIP_BEFORE_Y_MAX}\"), skipping")
             continue
 
         car_image = captured_frame.crop((x_min, y_min, x_max, y_max))
@@ -126,12 +127,13 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
                 _print(f"Found license plate {license_plate_as_string}, but it's shorter than {MINIMUM_NUMBER_OF_CHARS_FOR_MATCH}")
                 continue
 
+            _print(y_max)
             _print(f"Found license plate {license_plate_as_string}")
             license_plates_recognized.append((car_image, license_plate_image, license_plate_as_string))
 
     return license_plates_recognized
 
-# any => Image (but it cannot be used as type)
+# any => Image (it cannot be used as type)
 def validate_results_between_rounds(recognitions_between_rounds: list[list[(any, any, str)]], number_of_occurrences_to_be_valid: int):
     license_plate_counts = {}
     for recognitions in recognitions_between_rounds:
@@ -165,7 +167,7 @@ async def detection():
             time.sleep(1)
             continue
 
-        license_plates_recognized = detect_license_plates_from_frame(LATEST_FRAME)
+        license_plates_recognized = detect_license_plates_from_frame(LATEST_FRAME.copy())
         if len(license_plates_recognized) == 0:
             continue
 
@@ -175,18 +177,31 @@ async def detection():
         
         validated_results = validate_results_between_rounds(recognitions_between_rounds, NUMBER_OF_OCCURRENCES_TO_BE_VALID)
         if len(validated_results) == 0:
-            recognitions_between_rounds = []
+            if recognitions_between_rounds != []:
+                recognitions_between_rounds.pop(0)
             continue
             
-        _print("Sending result: ")
+        _print("Sending results: ")
         _print(validated_results)
-        for socket in CONNECTED_SOCKETS:
-            for res in validated_results:
-                await socket.send(res[2])
+        for res in validated_results:
+            car_image = utils.img_to_bytes(res[0])
+            license_plate_image = utils.img_to_bytes(res[1])
+            license_plate_as_string = str(res[2]) # just to make sure it's string
+            license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
+            license_plate_uuid = str(uuid.uuid4())
+            license_plate_formated_string = license_plate_as_string + " => " + license_plate_uuid
+            for socket in CONNECTED_SOCKETS:
+                # try:
+                await socket.send(car_image)
+                await socket.send(license_plate_image)
+                await socket.send(license_plate_formated_string)
+                # except Exception as e:
+                #     _print(e)
 
         recognitions_between_rounds = []
 
 def run_detection():
+    import asyncio
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(detection())

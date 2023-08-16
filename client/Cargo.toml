@@ -1,0 +1,25 @@
+[package]
+name = "main-gate-alpr-client"
+version = "0.0.1"
+license-file = "../LICENSE"
+description = "TODO"
+repository = "https://github.com/TDiblik/main-gate-alpr"
+authors = ["Tomáš Diblík <dibla.tomas@post.cz>"]
+edition = "2021"
+publish = false
+
+[profile.release]
+opt-level = 3
+strip = "symbols"
+lto = true
+
+[dependencies]
+eframe = { version = "0.22", features = ["default_fonts"] }
+egui_extras = { version = "0.22", features = ["image"] }
+image = { version = "0.24", default-features = false, features = ["jpeg"] }
+
+tokio = { version = "1", features = ["full"] }
+websockets = "0.3"
+
+anyhow = "1.0"
+uuid = { version = "1.4", features = ["v4", "fast-rng"] }
