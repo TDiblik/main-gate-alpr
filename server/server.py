@@ -41,15 +41,18 @@ def _print(string):
 
 ############ Web socket server ############
 CONNECTED_SOCKETS = []
+CONNECTED_SOCKETS_LOCK = threading.Lock()
 async def handle_connection(websocket, path):
     global CONNECTED_SOCKETS
-    CONNECTED_SOCKETS.append(websocket)
+    with CONNECTED_SOCKETS_LOCK:
+        CONNECTED_SOCKETS.append(websocket)
     try:
         await websocket.send("echo")
         async for message in websocket:
             pass
     finally:
-        CONNECTED_SOCKETS.remove(websocket)
+        with CONNECTED_SOCKETS_LOCK:
+            CONNECTED_SOCKETS.remove(websocket)
 def run_websocket_server():
     import asyncio
     loop = asyncio.new_event_loop()
@@ -190,13 +193,11 @@ async def detection():
             license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
             license_plate_uuid = str(uuid.uuid4())
             license_plate_formated_string = license_plate_as_string + " => " + license_plate_uuid
-            for socket in CONNECTED_SOCKETS:
-                # try:
-                await socket.send(car_image)
-                await socket.send(license_plate_image)
-                await socket.send(license_plate_formated_string)
-                # except Exception as e:
-                #     _print(e)
+            with CONNECTED_SOCKETS_LOCK:
+                for socket in CONNECTED_SOCKETS:
+                    await socket.send(car_image)
+                    await socket.send(license_plate_image)
+                    await socket.send(license_plate_formated_string)
 
         recognitions_between_rounds = []
 
