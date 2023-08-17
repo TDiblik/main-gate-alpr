@@ -10,6 +10,7 @@ pub struct CarRow {
     pub car_image: RetainedImage,
     pub license_plate_image: RetainedImage,
     pub license_plate_as_string: String,
+    pub captured_at_formatted: String,
 }
 
 impl CarRow {
@@ -24,6 +25,27 @@ impl CarRow {
             car_image,
             license_plate_image,
             license_plate_as_string,
+            captured_at_formatted: chrono::Local::now()
+                .naive_local()
+                .format("%d.%m.%Y %H:%M:%S")
+                .to_string(),
         }
     }
+}
+
+pub type SharedWebSocketState = Arc<Mutex<WebSocketState>>;
+pub struct WebSocketState {
+    pub value: WebSocketStates,
+}
+impl Default for WebSocketState {
+    fn default() -> Self {
+        Self {
+            value: WebSocketStates::Closed("Didn't even try opening (yet).".to_string()),
+        }
+    }
+}
+pub enum WebSocketStates {
+    Connected,
+    Reconnecting,
+    Closed(String),
 }

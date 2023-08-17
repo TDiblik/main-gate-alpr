@@ -4,26 +4,32 @@ use anyhow::anyhow;
 use egui_extras::RetainedImage;
 use websockets::{Frame, WebSocket};
 
-use crate::models::{CarRow, CarRows};
+use crate::models::{CarRow, CarRows, SharedWebSocketState, WebSocketStates};
 
 #[tokio::main]
-pub async fn websocket_main(car_rows: CarRows, websocket_url: String) {
+pub async fn websocket_main(
+    car_rows: CarRows,
+    websocket_state: SharedWebSocketState,
+    websocket_url: String,
+) {
     loop {
+        websocket_state.lock().unwrap().value = WebSocketStates::Reconnecting;
         let Ok(mut ws) = WebSocket::connect(&websocket_url).await else {
-            println!("Unable to connect to websocket. Trying again in 5 seconds");
+            websocket_state.lock().unwrap().value = WebSocketStates::Closed("Unable to connect to websocket. Retrying in 5 seconds".to_string());
             tokio::time::sleep(Duration::from_secs(5)).await;
             continue;
         };
 
         match ws.receive().await {
             Ok(Frame::Text { payload, .. }) if payload == "echo" => {
-                println!("Received echo. Good to go.")
+                websocket_state.lock().unwrap().value = WebSocketStates::Connected;
             }
             s => {
-                println!(
-                    "First message received was supposed to be echo, but got \"{:?}\" intead. Retrying...",
-                    s
+                websocket_state.lock().unwrap().value = WebSocketStates::Closed(
+                    format!("First message received was supposed to be echo, but got \"{:?}\" intead. Retrying in 5 seconds...", s)
                 );
+                _ = ws.close(None).await;
+                tokio::time::sleep(Duration::from_secs(5)).await;
                 continue;
             }
         };
@@ -33,7 +39,12 @@ pub async fn websocket_main(car_rows: CarRows, websocket_url: String) {
                 Ok(Some(s)) => car_rows.lock().unwrap().insert(0, s),
                 Ok(None) => {}
                 Err(s) => {
-                    println!("Error while receiving car: {}. Refreshing connection", s);
+                    websocket_state.lock().unwrap().value = WebSocketStates::Closed(format!(
+                        "Error while receiving car: {}. Refreshing connection in 1 second...",
+                        s
+                    ));
+                    _ = ws.close(None).await;
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                     break;
                 }
             }
