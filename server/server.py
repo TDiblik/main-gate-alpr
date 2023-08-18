@@ -4,6 +4,7 @@ import uuid
 import threading
 import time
 import cv2
+import asyncio
 import websockets
 import numpy as np
 from PIL import Image
@@ -41,24 +42,18 @@ def _print(string):
 
 ############ Web socket server ############
 CONNECTED_SOCKETS = []
-CONNECTED_SOCKETS_LOCK = threading.Lock()
 async def handle_connection(websocket, path):
     global CONNECTED_SOCKETS
-    with CONNECTED_SOCKETS_LOCK:
-        CONNECTED_SOCKETS.append(websocket)
+    CONNECTED_SOCKETS.append(websocket)
     try:
         await websocket.send("echo")
         async for message in websocket:
             pass
     finally:
-        with CONNECTED_SOCKETS_LOCK:
-            CONNECTED_SOCKETS.remove(websocket)
-def run_websocket_server():
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(websockets.serve(handle_connection, "localhost", WS_PORT))
-    loop.run_forever()
+        CONNECTED_SOCKETS.remove(websocket)
+async def run_websocket_server():
+    server = await websockets.serve(handle_connection, "localhost", WS_PORT)
+    await server.wait_closed()
 
 ############ Video capture ############
 LATEST_FRAME = None
@@ -162,9 +157,10 @@ def validate_results_between_rounds(recognitions_between_rounds: list[list[(any,
 
     return validated_recognitions
 
-async def detection():
+async def run_detection():
     recognitions_between_rounds = []
     while True:
+        await asyncio.sleep(0.01) # Checkup on websocket server task
         if LATEST_FRAME is None:
             _print("LATEST_FRAME is None, nothing to do, sleeping for 1 second...")
             time.sleep(1)
@@ -193,31 +189,38 @@ async def detection():
             license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
             license_plate_uuid = str(uuid.uuid4())
             license_plate_formated_string = license_plate_as_string + " => " + license_plate_uuid
-            with CONNECTED_SOCKETS_LOCK:
-                for socket in CONNECTED_SOCKETS:
+            for socket in CONNECTED_SOCKETS:
+                try:
                     await socket.send(car_image)
                     await socket.send(license_plate_image)
                     await socket.send(license_plate_formated_string)
+                except:
+                    _print("Socket closed before or while the server was sending a response.")
 
         recognitions_between_rounds = []
 
-def run_detection():
-    import asyncio
+def init_websocket_server_and_detection():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(detection())
+    
+    asyncio.ensure_future(run_websocket_server())
+    asyncio.ensure_future(run_detection())
+
+    try:
+        loop.run_forever()
+    finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
+
 
 if __name__ == "__main__":
     os.environ['OMP_THREAD_LIMIT'] = '1'
 
-    websocket_thread = threading.Thread(target=run_websocket_server)
     capture_thread = threading.Thread(target=run_video_capture)
-    detection_thread = threading.Thread(target=run_detection)
+    work_thread = threading.Thread(target=init_websocket_server_and_detection)
 
-    websocket_thread.start()
     capture_thread.start()
-    detection_thread.start()
+    work_thread.start()
 
-    websocket_thread.join()
     capture_thread.join()
-    detection_thread.join()
+    work_thread.join()
