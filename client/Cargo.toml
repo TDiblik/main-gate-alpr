@@ -2,7 +2,7 @@
 name = "main-gate-alpr-client"
 version = "0.0.1"
 license-file = "../LICENSE"
-description = "TODO"
+description = "Example client main gate alpr client"
 repository = "https://github.com/TDiblik/main-gate-alpr"
 authors = ["Tomáš Diblík <dibla.tomas@post.cz>"]
 edition = "2021"

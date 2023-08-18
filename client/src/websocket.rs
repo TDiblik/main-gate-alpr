@@ -10,11 +10,11 @@ use crate::models::{CarRow, CarRows, SharedWebSocketState, WebSocketStates};
 pub async fn websocket_main(
     car_rows: CarRows,
     websocket_state: SharedWebSocketState,
-    websocket_url: String,
+    websocket_url: &str,
 ) {
     loop {
         websocket_state.lock().unwrap().value = WebSocketStates::Reconnecting;
-        let Ok(mut ws) = WebSocket::connect(&websocket_url).await else {
+        let Ok(mut ws) = WebSocket::connect(websocket_url).await else {
             websocket_state.lock().unwrap().value = WebSocketStates::Closed("Unable to connect to websocket. Retrying in 5 seconds".to_string());
             tokio::time::sleep(Duration::from_secs(5)).await;
             continue;

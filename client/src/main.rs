@@ -15,6 +15,7 @@ use utils::calc_scaling_factor;
 use models::{CarRows, SharedWebSocketState, WebSocketState, WebSocketStates};
 use websocket::websocket_main;
 
+const WEBSOCKET_URL: &str = "ws://localhost:8765";
 const CAR_IMAGE_HEIGHT: f32 = 250.0;
 const LICENSE_PLATE_IMAGE_HEIGHT: f32 = 75.0;
 const TEXT_HEIGHT: f32 = 75.0;
@@ -25,7 +26,7 @@ fn main() -> Result<(), eframe::Error> {
         ..Default::default()
     };
     eframe::run_native(
-        "Main gate ALPR",
+        "Main gate ALPR client",
         options,
         Box::new(|_cc| Box::<App>::default()),
     )
@@ -47,11 +48,7 @@ impl Default for App {
         let cloned_websocket_state = Arc::clone(&new_app.websocket_state);
         // TODO: Read from env during compilation
         thread::spawn(move || {
-            websocket_main(
-                cloned_car_rows_state,
-                cloned_websocket_state,
-                "ws://localhost:8765".to_owned(),
-            )
+            websocket_main(cloned_car_rows_state, cloned_websocket_state, WEBSOCKET_URL)
         });
 
         new_app

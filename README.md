@@ -16,7 +16,8 @@
    ```
 3. Go back into root folder
 4. `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
-5. `pip install -r requirements.txt`
+5. Install [tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html)
+6. `pip install -r requirements.txt`
 
 ### Start the web server
 
@@ -51,6 +52,13 @@
 
 1. Install [tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html)
 2. `python test.py {path_to_your_model} {path_to_image_to_test}`
+
+### Start the example client
+
+1. Make sure you have rust installed
+2. Go into `./client`
+3. Make sure variable `WEBSOCKET_URL` is set up correctly inside `./client/src/main.rs` based on your server's `.env` (sorry, I was too lazy to implement env config only because of this one variable)
+4. Run `cargo r`
 
 # Notes
 
