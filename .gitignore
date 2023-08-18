@@ -17,6 +17,9 @@ ai/cropped_box_for_tesseract_*.jpg
 # Server
 server/*.pt
 server/.env
+db/data/
+db/log/
+db/secrets/
 
 # Client
 client/target/

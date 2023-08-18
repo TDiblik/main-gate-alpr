@@ -1,15 +1,16 @@
+import asyncio
 import os
 import sys
-import uuid
-import threading
 import time
+import uuid
 import cv2
-import asyncio
-import websockets
 import numpy as np
+import threading
+import websockets
+from dotenv import load_dotenv
 from PIL import Image
 from ultralytics import YOLO
-from dotenv import load_dotenv
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import utils
 
@@ -20,6 +21,12 @@ WS_PORT = int(os.getenv("WS_PORT"))
 RTSP_CAPTURE_CONFIG = os.getenv("RTSP_CAPTURE_CONFIG") 
 PURE_YOLO_MODEL_PATH = os.getenv("PURE_YOLO_MODEL_PATH") 
 LICENSE_PLATE_YOLO_MODEL_PATH = os.getenv("LICENSE_PLATE_YOLO_MODEL_PATH") 
+DB_ENABLED = os.getenv("DB_ENABLED") == "True"
+DB_SERVER = os.getenv("DB_SERVER")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 MINIMUM_NUMBER_OF_CHARS_FOR_MATCH = int(os.getenv("MINIMUM_NUMBER_OF_CHARS_FOR_MATCH"))
 NUMBER_OF_VALIDATION_ROUNDS = int(os.getenv("NUMBER_OF_VALIDATION_ROUNDS"))
 NUMBER_OF_OCCURRENCES_TO_BE_VALID = int(os.getenv("NUMBER_OF_OCCURRENCES_TO_BE_VALID"))
@@ -78,8 +85,7 @@ def run_video_capture():
                 cv2.startWindowThread()
                 cv2.namedWindow("frame")
                 cv2.imshow("frame", cv2.resize(frame, (750, 750)))
-                if cv2.waitKey(20) & 0xFF == ord('q'):
-                    os.exit()
+                cv2.waitKey(20)
 
             LATEST_FRAME = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).astype(np.uint8))
 
@@ -185,9 +191,9 @@ async def run_detection():
         for res in validated_results:
             car_image = utils.img_to_bytes(res[0])
             license_plate_image = utils.img_to_bytes(res[1])
+            license_plate_uuid = str(uuid.uuid4())
             license_plate_as_string = str(res[2]) # just to make sure it's string
             license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
-            license_plate_uuid = str(uuid.uuid4())
             license_plate_formated_string = license_plate_as_string + " => " + license_plate_uuid
             for socket in CONNECTED_SOCKETS:
                 try:
@@ -196,6 +202,12 @@ async def run_detection():
                     await socket.send(license_plate_formated_string)
                 except:
                     _print("Socket closed before or while the server was sending a response.")
+            if DB_ENABLED:
+                # todo: fire a new thread for this, so detection can continue without waiting (preferably inside utils function)
+                try:
+                    utils.insert_license_plate_to_db(license_plate_uuid, license_plate_as_string, DB_SERVER, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
+                except:
+                    _print(f"Unable to insert {license_plate_uuid} into database")
 
         recognitions_between_rounds = []
 

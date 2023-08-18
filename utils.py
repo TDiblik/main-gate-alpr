@@ -3,12 +3,14 @@ import os
 import shutil
 import cv2
 import imutils
-from skimage.filters import threshold_local
 import numpy as np
-from ultralytics import YOLO
-from PIL import Image
-import pytesseract
+import pymssql
 import concurrent
+import pytesseract
+from PIL import Image
+from datetime import datetime
+from skimage.filters import threshold_local
+from ultralytics import YOLO
 
 # Returns number of results + results as boxes
 def detect_with_yolo(preloaded_model: YOLO, car_image: Image) -> (int, any):
@@ -137,3 +139,10 @@ def img_to_bytes(image: Image, format="JPEG"):
     bytes_io = io.BytesIO()
     image.save(bytes_io, format=format)
     return bytes_io.getvalue()
+
+def insert_license_plate_to_db(id: str, license_plate: str, db_server: str, db_port: str, db_name: str, db_user: str, db_pass: str):
+    conn = pymssql.connect(server=db_server, port=db_port, database=db_name, user=db_user, password=db_pass)
+    cursor = conn.cursor()
+    cursor.execute("insert into main_gate_alpr_license_plates (id, license_plate, captured_at) values (%s, %s, %s)", (id, license_plate, datetime.now()))
+    conn.commit()
+    conn.close()
