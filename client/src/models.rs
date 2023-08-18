@@ -10,7 +10,7 @@ pub struct CarRow {
     pub car_image: RetainedImage,
     pub license_plate_image: RetainedImage,
     pub license_plate_as_string: String,
-    pub captured_at_formatted: String,
+    pub received_at_formatted: String,
 }
 
 impl CarRow {
@@ -25,7 +25,7 @@ impl CarRow {
             car_image,
             license_plate_image,
             license_plate_as_string,
-            captured_at_formatted: chrono::Local::now()
+            received_at_formatted: chrono::Local::now()
                 .naive_local()
                 .format("%d.%m.%Y %H:%M:%S")
                 .to_string(),

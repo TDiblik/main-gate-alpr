@@ -109,8 +109,8 @@ impl eframe::App for App {
 
                                         ui.label(
                                             egui::RichText::from(format!(
-                                                "Zapsáno v: {}",
-                                                car.captured_at_formatted
+                                                "Received at: {}",
+                                                car.received_at_formatted
                                             ))
                                             .color(Color32::WHITE),
                                         );
@@ -118,12 +118,6 @@ impl eframe::App for App {
 
                                         ui.label(format!("id: {}", car.uuid));
                                         ui.add_space(10.0);
-
-                                        ui.add(egui::Button::new(
-                                            egui::RichText::from("Upravit")
-                                                .size(25.0)
-                                                .color(Color32::WHITE),
-                                        ));
                                     });
                                 });
                             });
