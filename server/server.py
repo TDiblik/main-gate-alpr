@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import threading
 import websockets
+from datetime import datetime, timedelta 
 from dotenv import load_dotenv
 from PIL import Image
 from ultralytics import YOLO
@@ -29,6 +30,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 SAVE_RESULTS_ENABLED =  os.getenv("SAVE_RESULTS_ENABLED") == "True"
 RESULTS_PATH = os.getenv("RESULTS_PATH")
+SHOULD_SEND_SAME_RESULTS = os.getenv("SHOULD_SEND_SAME_RESULTS") == "True"
 MINIMUM_NUMBER_OF_CHARS_FOR_MATCH = int(os.getenv("MINIMUM_NUMBER_OF_CHARS_FOR_MATCH"))
 NUMBER_OF_VALIDATION_ROUNDS = int(os.getenv("NUMBER_OF_VALIDATION_ROUNDS"))
 NUMBER_OF_OCCURRENCES_TO_BE_VALID = int(os.getenv("NUMBER_OF_OCCURRENCES_TO_BE_VALID"))
@@ -167,6 +169,7 @@ def validate_results_between_rounds(recognitions_between_rounds: list[list[(any,
 
 async def run_detection():
     recognitions_between_rounds = []
+    license_plates_sent_history = []
     while True:
         await asyncio.sleep(0.01) # Checkup on websocket server task
         if LATEST_FRAME is None:
@@ -190,15 +193,20 @@ async def run_detection():
             
         _print("Sending results: ")
         _print(validated_results)
+        license_plates_sent_history = [s for s in license_plates_sent_history if datetime.now() - s[1] <= timedelta(minutes=5)]
         for res in validated_results:
             car_image_raw = res[0]
             license_plate_image_raw = res[1]
+            license_plate_as_string = str(res[2]) # just to make sure it's string
+            license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
+            
+            if SHOULD_SEND_SAME_RESULTS == False and any(s[0] == license_plate_as_string for s in license_plates_sent_history):
+                continue
+            license_plates_sent_history.append((license_plate_as_string, datetime.now()))
 
             car_image = utils.img_to_bytes(car_image_raw)
             license_plate_image = utils.img_to_bytes(license_plate_image_raw)
             license_plate_uuid = str(uuid.uuid4())
-            license_plate_as_string = str(res[2]) # just to make sure it's string
-            license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
             license_plate_formated_string = license_plate_as_string + " => " + license_plate_uuid
             for socket in CONNECTED_SOCKETS:
                 try:
