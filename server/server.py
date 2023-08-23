@@ -27,6 +27,8 @@ DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
+SAVE_RESULTS_ENABLED =  os.getenv("SAVE_RESULTS_ENABLED") == "True"
+RESULTS_PATH = os.getenv("RESULTS_PATH")
 MINIMUM_NUMBER_OF_CHARS_FOR_MATCH = int(os.getenv("MINIMUM_NUMBER_OF_CHARS_FOR_MATCH"))
 NUMBER_OF_VALIDATION_ROUNDS = int(os.getenv("NUMBER_OF_VALIDATION_ROUNDS"))
 NUMBER_OF_OCCURRENCES_TO_BE_VALID = int(os.getenv("NUMBER_OF_OCCURRENCES_TO_BE_VALID"))
@@ -94,7 +96,7 @@ def run_video_capture():
 ############ Detection ############
 # [(Image, Image, str)] => array of (car image, license plate image, license plate as string)
 def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, str)]:
-    number_of_yolo_boxes, yolo_boxes = utils.detect_with_yolo(PURE_YOLO_MODEL, captured_frame)
+    number_of_yolo_boxes, yolo_boxes = utils.detect_with_yolo(PURE_YOLO_MODEL, captured_frame, DEBUG)
     if number_of_yolo_boxes == 0:
         _print("No images of cars found")
         return []
@@ -118,7 +120,7 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
         if DEBUG:
             car_image.save(utils.gen_intermediate_file_name(f"cropped_car", "jpg", i))
 
-        number_of_license_plate_boxes_found, license_plates_as_boxes = utils.detect_with_yolo(LICENSE_PLATE_YOLO_MODEL, car_image)
+        number_of_license_plate_boxes_found, license_plates_as_boxes = utils.detect_with_yolo(LICENSE_PLATE_YOLO_MODEL, car_image, DEBUG)
         if number_of_license_plate_boxes_found == 0:
             continue
 
@@ -189,8 +191,11 @@ async def run_detection():
         _print("Sending results: ")
         _print(validated_results)
         for res in validated_results:
-            car_image = utils.img_to_bytes(res[0])
-            license_plate_image = utils.img_to_bytes(res[1])
+            car_image_raw = res[0]
+            license_plate_image_raw = res[1]
+
+            car_image = utils.img_to_bytes(car_image_raw)
+            license_plate_image = utils.img_to_bytes(license_plate_image_raw)
             license_plate_uuid = str(uuid.uuid4())
             license_plate_as_string = str(res[2]) # just to make sure it's string
             license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
@@ -208,6 +213,9 @@ async def run_detection():
                     utils.insert_license_plate_to_db(license_plate_uuid, license_plate_as_string, DB_SERVER, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
                 except:
                     _print(f"Unable to insert {license_plate_uuid} into database")
+            if SAVE_RESULTS_ENABLED:
+                car_image_raw.save(os.path.join(RESULTS_PATH, f"{license_plate_uuid}_car.jpg"), "JPEG")
+                license_plate_image_raw.save(os.path.join(RESULTS_PATH, f"{license_plate_uuid}_lp.jpg"), "JPEG")
 
         recognitions_between_rounds = []
 
@@ -227,6 +235,9 @@ def init_websocket_server_and_detection():
 
 if __name__ == "__main__":
     os.environ['OMP_THREAD_LIMIT'] = '1'
+    if SAVE_RESULTS_ENABLED:
+        if os.path.exists(RESULTS_PATH) == False:
+            os.mkdir(RESULTS_PATH)
 
     capture_thread = threading.Thread(target=run_video_capture)
     work_thread = threading.Thread(target=init_websocket_server_and_detection)

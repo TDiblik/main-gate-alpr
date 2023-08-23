@@ -20,6 +20,7 @@ server/.env
 db/data/
 db/log/
 db/secrets/
+server/results/
 
 # Client
 client/target/

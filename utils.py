@@ -13,8 +13,8 @@ from skimage.filters import threshold_local
 from ultralytics import YOLO
 
 # Returns number of results + results as boxes
-def detect_with_yolo(preloaded_model: YOLO, car_image: Image) -> (int, any):
-    result = preloaded_model.predict(car_image)[0]
+def detect_with_yolo(preloaded_model: YOLO, car_image: Image, verbose: bool) -> (int, any):
+    result = preloaded_model.predict(car_image, verbose=verbose)[0]
     return (len(result.boxes), result.boxes)
 
 def normalize_label(label):
