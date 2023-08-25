@@ -46,7 +46,6 @@ impl Default for App {
 
         let cloned_car_rows_state = Arc::clone(&new_app.car_rows);
         let cloned_websocket_state = Arc::clone(&new_app.websocket_state);
-        // TODO: Read from env during compilation
         thread::spawn(move || {
             websocket_main(cloned_car_rows_state, cloned_websocket_state, WEBSOCKET_URL)
         });
