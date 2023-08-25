@@ -4,7 +4,24 @@ TODO: Table of contents
 
 # Showcase
 
+TODO
+
 # How does it work?
+
+This is just a high level explanation, if you want more in-depth understanding, read the [env config](#how-to-configure-env) + source code :D
+
+1. When you start the web server, all env variables and ai models all loaded into memory.
+2. If you enabled result saving, the directory for resutls will get created
+3. Two threads get spin up,
+   - First one reads frames from the IP cam / video and ensures to always be connected to the input source. If you're running in DEBUG, you'll see a window from the camera.
+4. Second one get's latest frame and passes it to pure yolo.
+5. After analyzing, the program crops all cars into array and checks whether you're not far enought
+6. After that, it passes the cropped image to fine-tuned yolo for license plates.
+7. The license plate gets cropped and pre-precossed (more inside `./utils.py`)
+8. Then the license plate get's separated into each character which gets passed to tesseract while using all possible threads
+9. License plate value gets finalized and validated ([more on the validation](#how-to-configure-env))
+10. Licese plate and cropped car gets sent to all websocket connected clients.
+    - and optionally saved into DB/Results dir, based on your .env
 
 # How to setup
 
@@ -160,7 +177,7 @@ You can find example config at `./server/.env.development`
 
 ## ./ai/resources/yolov8\*
 
-Yolo models were downloaded from the [ultralytics repository](https://github.com/ultralytics/ultralytics). I was unable to find any documentation on how to credit them, please, if you do, send a pull request.
+Yolo models were downloaded from the [ultralytics repository](https://github.com/ultralytics/ultralytics). I was unable to find any documentation on how to credit them, please, if you do, please send a pull request.
 
 ## ./ai/resources/andrewmvd_dataset.zip
 
