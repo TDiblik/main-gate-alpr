@@ -71,6 +71,13 @@ This is just a high level explanation, if you want more in-depth understanding, 
 1. Go into `./client`
 2. Make sure variable `WEBSOCKET_URL` is set up correctly inside `./client/src/main.rs` based on your server's `.env` (sorry, I was too lazy to implement env config only because of this one variable)
 3. Run `cargo r`
+4. You should see one of the following states
+   - Client can be trying to connect
+     - ![reconnecting picture](./readme/client_reconnecting.png)
+   - Client can be disconnected (hover over for more info)
+     - ![connection closed picture](./readme/client_connection_closed.png)
+   - Or working as intended! (if you setup everything correctlly)
+     - ![connected and working](./readme/client_connected_working.png)
 
 ## Train your own model (optional)
 
