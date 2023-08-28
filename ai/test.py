@@ -35,7 +35,7 @@ if __name__ == '__main__':
     ax = plt.gca()
     utils.prepare_env_for_reading_license_plates(True)
     for (i, box) in enumerate(license_plates_as_boxes):
-        _, license_plate_as_string = utils.read_license_plate(i, box, img_to_test, 500, 20, True, 4)
+        _, license_plate_as_string = utils.read_license_plate(i, box, img_to_test, 500, 20, True, False, 4) # defaults from .env.development
         if len(license_plate_as_string) == 0:
             print(f"Result {i}, unable to find any characters of detected license plate")
         print(f"Found license plate: {license_plate_as_string}")

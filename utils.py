@@ -69,7 +69,7 @@ def prepare_env_for_reading_license_plates(should_save_intermediate_files: bool)
 
 # Read single license plate box
 # Returns license plate as string
-def read_license_plate(unique_identifier: str, box: any, original_image: Image, width_boost: int, additional_white_spacing_each_side: int, debug: bool, minimum_number_of_chars_for_match: int) -> (Image, str):
+def read_license_plate(unique_identifier: str, box: any, original_image: Image, width_boost: int, additional_white_spacing_each_side: int, debug: bool, should_try_lp_crop: bool, minimum_number_of_chars_for_match: int) -> (Image, str):
     # Crop image
     x_min, y_min, x_max, y_max = box.xyxy.cpu().detach().numpy()[0]
     original_width = x_max - x_min
@@ -83,9 +83,10 @@ def read_license_plate(unique_identifier: str, box: any, original_image: Image, 
         "L"
     ).resize( # resizing makes recognition more effective
         [boosted_width, boosted_height]
-    ).crop( # crop from left and right, because license plate recognition matches with overflow
-        ((45, 0, boosted_width - 20, boosted_height)) 
     )
+    if should_try_lp_crop:
+        # crop from left and right, because license plate recognition matches with overflow
+        license_plate_cropped_img = license_plate_cropped_img.crop(((45, 0, boosted_width - 20, boosted_height)))
     if debug:
         license_plate_cropped_img.save(gen_intermediate_file_name("cropped_license_plate_full", "jpg", unique_identifier))
         

@@ -40,7 +40,7 @@ This is just a high level explanation, if you want more in-depth understanding, 
    cat tdiblik_lp_finetuned_yolov8m_* > tdiblik_lp_finetuned_yolov8m.pt
    cat tdiblik_lp_finetuned_yolov8l_* > tdiblik_lp_finetuned_yolov8l.pt
    cat tdiblik_lp_finetuned_yolov8x_* > tdiblik_lp_finetuned_yolov8x.pt
-   cp *.pt ..
+   cp yolov8*.pt ..
    ```
 3. Go back into root folder
 4. `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
@@ -157,6 +157,11 @@ You can find example config at `./server/.env.development`
 
 ### Custom tweaks (tinkering with these can become a silent problem, if you don't know what you're doing)
 
+- SHOULD_TRY_LP_CROP
+  - Some models may have problems where they recognize the part next to license plate as a part of license plate (see picture below)
+  - If you encounter this behavior from your models, set this value to `True` and this will try to programatically cut that part out.
+  - Otherwise, just remove the option or set it to any other value than `False`
+  - ![example of that annoying part getting recognized](./readme/explain_lp_crop.jpg)
 - MINIMUM_NUMBER_OF_CHARS_FOR_MATCH
   - You probably want to set this value to default `4` (shortest license plate in Europe)
   - Basically, if you match a license plate, however you're unable to find more then MINIMUM_NUMBER_OF_CHARS_FOR_MATCH of contours (pre-precessed, cropped, single characters of license plate), there is no reason to try reading it (and wast CPU time/cycles), since the license plates won't be valid anyway. So, the smart decision is just to skip it.

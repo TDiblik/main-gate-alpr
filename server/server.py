@@ -9,6 +9,7 @@ import threading
 import websockets
 from datetime import datetime, timedelta 
 from dotenv import load_dotenv
+from difflib import SequenceMatcher
 from PIL import Image
 from ultralytics import YOLO
 
@@ -31,6 +32,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 SAVE_RESULTS_ENABLED =  os.getenv("SAVE_RESULTS_ENABLED") == "True"
 RESULTS_PATH = os.getenv("RESULTS_PATH")
 SHOULD_SEND_SAME_RESULTS = os.getenv("SHOULD_SEND_SAME_RESULTS") == "True"
+SHOULD_TRY_LP_CROP=os.getenv("SHOULD_TRY_LP_CROP") == "True"
 MINIMUM_NUMBER_OF_CHARS_FOR_MATCH = int(os.getenv("MINIMUM_NUMBER_OF_CHARS_FOR_MATCH"))
 NUMBER_OF_VALIDATION_ROUNDS = int(os.getenv("NUMBER_OF_VALIDATION_ROUNDS"))
 NUMBER_OF_OCCURRENCES_TO_BE_VALID = int(os.getenv("NUMBER_OF_OCCURRENCES_TO_BE_VALID"))
@@ -43,7 +45,7 @@ CAR_RELATED_LABELS = [
     utils.normalize_label('car'), 
     utils.normalize_label('motorcycle'), 
     utils.normalize_label('bus'), 
-    # utils.normalize_label('train'), 
+    utils.normalize_label('train'), 
     utils.normalize_label('truck'),
     utils.normalize_label('boat'), 
 ]
@@ -127,7 +129,7 @@ def detect_license_plates_from_frame(captured_frame: Image) -> [(Image, Image, s
             continue
 
         for (j, license_plate_box) in enumerate(license_plates_as_boxes):
-            license_plate_image, license_plate_as_string = utils.read_license_plate(f"{i}_{j}", license_plate_box, car_image, 500, 20, DEBUG, MINIMUM_NUMBER_OF_CHARS_FOR_MATCH)
+            license_plate_image, license_plate_as_string = utils.read_license_plate(f"{i}_{j}", license_plate_box, car_image, 500, 20, DEBUG, SHOULD_TRY_LP_CROP, MINIMUM_NUMBER_OF_CHARS_FOR_MATCH)
             if license_plate_as_string == "":
                 _print(f"Car {i} ; Result {j}, unable to find any characters of detected license plate")
                 continue
@@ -200,7 +202,8 @@ async def run_detection():
             license_plate_as_string = str(res[2]) # just to make sure it's string
             license_plate_as_string = license_plate_as_string[:3] + " " + license_plate_as_string[3:]
             
-            if SHOULD_SEND_SAME_RESULTS == False and any(s[0] == license_plate_as_string for s in license_plates_sent_history):
+            if SHOULD_SEND_SAME_RESULTS == False and any((s[0] == license_plate_as_string or SequenceMatcher(None, s[0], license_plate_as_string).ratio() > 0.8) for s in license_plates_sent_history):
+                _print(f"Already sent this license plate... Skipping (\"{license_plate_as_string}\")")
                 continue
             license_plates_sent_history.append((license_plate_as_string, datetime.now()))
 
