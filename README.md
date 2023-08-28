@@ -37,6 +37,9 @@ This is just a high level explanation, if you want more in-depth understanding, 
    cat yolov8x_* > yolov8x.pt
    cat andrewmvd_dataset_* > andrewmvd_dataset.zip
    cat aslanahmedov_dataset_* > aslanahmedov_dataset.zip
+   cat tdiblik_lp_finetuned_yolov8m_* > tdiblik_lp_finetuned_yolov8m.pt
+   cat tdiblik_lp_finetuned_yolov8l_* > tdiblik_lp_finetuned_yolov8l.pt
+   cat tdiblik_lp_finetuned_yolov8x_* > tdiblik_lp_finetuned_yolov8x.pt
    cp *.pt ..
    ```
 3. Go back into root folder
