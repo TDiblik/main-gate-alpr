@@ -28,7 +28,8 @@ This is just a high level explanation, if you want more in-depth understanding, 
 ## Prerequisites
 
 - python 3.11.2
-- docker
+- docker (optional, in case you need db for local dev)
+- rust (optional, in case you want to try-out the example provided client, however if you connect to the websocket server through postman, it will be enough)
 
 1. Go into `./ai/resources` folder
 2. ```
@@ -50,7 +51,7 @@ This is just a high level explanation, if you want more in-depth understanding, 
 
 ## Start the websocket and matching server
 
-1. Go into `./ai/server`
+1. Go into `./server`
 2. Copy `.env.development` to `.env`
 3. [Setup env](#how-to-configure-env)
 4. Setup db server (optional, depends on your `.env`)
@@ -122,8 +123,8 @@ You can find example config at `./server/.env.development`
   - Example value could like `"../ai/resources/yolov8n.pt"`
 - LICENSE_PLATE_YOLO_MODEL_PATH
   - **required**
-  - Fine-tuned model used for matching license plates.
-  - TODO: train a model for each version of yolo and put it into ./ai/resources + provide example same as pure_yolo_model_path
+  - Fine-tuned model path used for matching license plates.
+  - I have fine tuned every single version of yolo already, so you don't have to. You can find it under `tdiblik_lp_finetuned_yolov8*.pt` (where `*` represents the model type)
 - DB_ENABLED
   - if you want to insert results into database, set this value to `True`.
   - If you set this value to `True`, make sure to follow db-setup guide.

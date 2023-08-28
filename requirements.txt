@@ -9,3 +9,4 @@ python-dotenv==1.0.0
 scikit-image==0.21.0
 ultralytics==8.0.147
 websockets==11.0.3
+pymssql==2.2.8

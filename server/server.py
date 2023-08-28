@@ -65,7 +65,7 @@ async def handle_connection(websocket, path):
     finally:
         CONNECTED_SOCKETS.remove(websocket)
 async def run_websocket_server():
-    server = await websockets.serve(handle_connection, "localhost", WS_PORT)
+    server = await websockets.serve(handle_connection, "", WS_PORT)
     await server.wait_closed()
 
 ############ Video capture ############
