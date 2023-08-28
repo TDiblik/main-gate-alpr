@@ -1,0 +1,13 @@
+[Unit]
+Description=Start up websocket and alpr server
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/<<usr>>/main-gate-alpr/server/
+ExecStart=/usr/bin/python3 server.py
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

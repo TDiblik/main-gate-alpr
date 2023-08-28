@@ -218,8 +218,9 @@ async def run_detection():
                     await socket.send(license_plate_formated_string)
                 except:
                     _print("Socket closed before or while the server was sending a response.")
+
+            # todo: fire a new thread for this (both), so detection can continue without waiting (preferably inside utils function)
             if DB_ENABLED:
-                # todo: fire a new thread for this, so detection can continue without waiting (preferably inside utils function)
                 try:
                     utils.insert_license_plate_to_db(license_plate_uuid, license_plate_as_string, DB_SERVER, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
                 except:

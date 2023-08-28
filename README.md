@@ -29,7 +29,7 @@ This is just a high level explanation, if you want more in-depth understanding, 
 
 - python 3.11.2
 - docker (optional, in case you need db for local dev)
-- rust (optional, in case you want to try-out the example provided client, however if you connect to the websocket server through postman, it will be enough)
+- rust (optional, in case you want to try-out the example provided client, however you can connect to the websocket server through any other app, like postman)
 
 1. Go into `./ai/resources` folder
 2. ```
@@ -48,6 +48,7 @@ This is just a high level explanation, if you want more in-depth understanding, 
    - or equivalent, [based on your system configuration](https://pytorch.org/#:~:text=Aid%20to%20Ukraine.-,INSTALL%20PYTORCH,-Select%20your%20preferences)
 5. Install [tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html)
 6. `pip install -r requirements.txt`
+7. Make sure you're doing this with the same (unix) user the program is gonna be run with! In case you're doing this under another user, make sure to complete steps 4-6 with `sudo -H -u <usr> pip3 install ...` prefix.
 
 ## Start the websocket and matching server
 
@@ -69,6 +70,14 @@ This is just a high level explanation, if you want more in-depth understanding, 
    4. `docker exec -it main_gate_aplr_db "bash"`
    5. `export QUERY_TO_EXECUTE="{CONTENTS_OF_./db/init.sql}"`
    6. `/opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P "MyV€ryStr0ngP4ssW0rĐ" -Q "$QUERY_TO_EXECUTE"`
+5. Automate the startup process (optional, recommended)
+   - Create a file named `main-gate-alpr-server.service` inside `/etc/systemd/system`
+   - Copy contents of the `./server/main-gate-alpr-server.example.service` into `main-gate-alpr-server.service` and make sure to fill in the `<<usr>>` in the process.
+   - `sudo systemctl daemon-reload`
+   - `sudo systemctl enable main-gate-alpr-server.service`
+   - `sudo systemctl restart main-gate-alpr-server.service`
+   - `sudo systemctl status main-gate-alpr-server.service` (optional, make sure the process is running)
+   - `sudo journalctl -u main-gate-alpr-server.service` (optional, see logs)
 
 ## Start the example client (optional)
 
