@@ -18,6 +18,7 @@ if not exists(select 1 from sys.tables where name = 'main_gate_alpr_license_plat
         visitor_receiver_name nvarchar(50),
         visit_reason nvarchar(200),
         soft_deleted bit not null default 0,
+        drove_away_at datetime,
     ) 
 end
 go

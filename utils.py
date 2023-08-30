@@ -141,9 +141,13 @@ def img_to_bytes(image: Image, format="JPEG"):
     image.save(bytes_io, format=format)
     return bytes_io.getvalue()
 
-def insert_license_plate_to_db(id: str, license_plate: str, db_server: str, db_port: str, db_name: str, db_user: str, db_pass: str):
-    conn = pymssql.connect(server=db_server, port=db_port, database=db_name, user=db_user, password=db_pass)
-    cursor = conn.cursor()
-    cursor.execute("insert into main_gate_alpr_license_plates (id, license_plate, captured_at) values (%s, %s, %s)", (id, license_plate, datetime.now()))
-    conn.commit()
-    conn.close()
+def save_validated_result(db_enabled: bool, car_id: str, license_plate: str, db_server: str, db_port: str, db_name: str, db_user: str, db_pass: str, save_results_enabled: bool, results_path: str, car_image_raw: Image, license_plate_image_raw: Image):
+    if db_enabled:
+        conn = pymssql.connect(server=db_server, port=db_port, database=db_name, user=db_user, password=db_pass)
+        cursor = conn.cursor()
+        cursor.execute("insert into main_gate_alpr_license_plates (id, license_plate, captured_at) values (%s, %s, %s)", (car_id, license_plate, datetime.now()))
+        conn.commit()
+        conn.close()
+    if save_results_enabled:
+        car_image_raw.save(os.path.join(results_path, f"{car_id}_car.jpg"), "JPEG")
+        license_plate_image_raw.save(os.path.join(results_path, f"{car_id}_lp.jpg"), "JPEG")

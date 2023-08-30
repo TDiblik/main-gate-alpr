@@ -197,6 +197,7 @@ You can find example config at `./server/.env.development`
 
 - When adding stuff into resources, for anything over 25MB, use the following command: `split -b 25M --numeric-suffixes <name> <name>_` and add proper documentation on how to build it back together after clone.
 - If you see `lp` alias inside code, it's probably shorthand form of `license plate`
+- At the moment, the biggest problem is the OCR engine itself, because sometimes, it does not behave correctlly. I have considered using PaddleOCR, however I was unable to get it working :(. Nevertheless, it works well enough in production (missing only like 1 in 20 cars) for me to not care xdd. If somebody decides to implement other OCR (or train a custom one 👀), I'll be more than happy to merge that PR.
 
 # Acknowledgements
 

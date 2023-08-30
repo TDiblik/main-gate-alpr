@@ -219,15 +219,8 @@ async def run_detection():
                 except:
                     _print("Socket closed before or while the server was sending a response.")
 
-            # todo: fire a new thread for this (both), so detection can continue without waiting (preferably inside utils function)
-            if DB_ENABLED:
-                try:
-                    utils.insert_license_plate_to_db(license_plate_uuid, license_plate_as_string, DB_SERVER, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
-                except:
-                    _print(f"Unable to insert {license_plate_uuid} into database")
-            if SAVE_RESULTS_ENABLED:
-                car_image_raw.save(os.path.join(RESULTS_PATH, f"{license_plate_uuid}_car.jpg"), "JPEG")
-                license_plate_image_raw.save(os.path.join(RESULTS_PATH, f"{license_plate_uuid}_lp.jpg"), "JPEG")
+            save_thread = threading.Thread(target=utils.save_validated_result, args=(DB_ENABLED, license_plate_uuid, license_plate_as_string, DB_SERVER, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, SAVE_RESULTS_ENABLED, RESULTS_PATH, car_image_raw, license_plate_image_raw))
+            save_thread.start()
 
         recognitions_between_rounds = []
 
