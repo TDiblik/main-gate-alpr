@@ -96,6 +96,7 @@ This is just a high-level explanation, if you want a more in-depth understanding
    - `sudo systemctl restart main-gate-alpr-server.service`
    - `sudo systemctl status main-gate-alpr-server.service` (optional, make sure the process is running)
    - `sudo journalctl -u main-gate-alpr-server.service` (optional, see logs)
+6. `python server.py`
 
 ## Start the example client (optional)
 
